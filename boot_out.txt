@@ -1,0 +1,2 @@
+Adafruit CircuitPython 7.2.0 on 2022-02-24; Pimoroni Pico LiPo (16MB) with rp2040
+Board ID:pimoroni_picolipo_16mb
