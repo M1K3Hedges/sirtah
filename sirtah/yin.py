@@ -12,6 +12,28 @@ __all__ = [
     "compute_yin"
 ]
 
+def cumsum_arr(arr):
+    new_list=[]
+    j=0
+    for i in range(0, len(arr)):
+        j+=arr[i]
+        new_list.append(j)
+    return np.array(new_list)
+
+
+def np_comp_mult(za, zb):
+    a, b = za
+    c, d = zb
+    re = a * c - b * d
+    im = a * d + b * c
+    return (re, im)
+
+
+def np_conjugate(z):
+    re, im = z
+    return (re, -im)
+
+
 def differenceFunction(x, N, tau_max):
     """
     Compute difference function of data x. This corresponds to equation (6) in [1]
@@ -27,16 +49,27 @@ def differenceFunction(x, N, tau_max):
     :rtype: list
     """
 
-    x = np.array(x, np.float64)
+    #x = np.array(x, np.float64)
     w = x.size
     tau_max = min(tau_max, w)
-    x_cumsum = np.concatenate((np.array([0.]), (x * x).cumsum()))
+    x_cumsum = cumsum_arr(np.concatenate((np.array([0.]), (x * x))))
     size = w + tau_max
     p2 = (size // 32).bit_length()
     nice_numbers = (16, 18, 20, 24, 25, 27, 30, 32)
     size_pad = min(x * 2 ** p2 for x in nice_numbers if x * 2 ** p2 >= size)
-    fc = np.fft.rfft(x, size_pad)
-    conv = np.fft.irfft(fc * fc.conjugate())[:tau_max]
+    
+    # maybe padding?
+    x_pad = np.concatenate((x, np.zeros((size_pad, ))))
+    fr, fi = np.fft.fft(x_pad)
+    #fc = np.fft.rfft(x, size_pad)
+
+    # multiply in freq domain
+    fr_m, fi_m = np_comp_mult((fr, fi), np_conjugate((fr, fi)))
+
+    # perform ifft and slice
+    conv, _ = np.fft.ifft(fr_m, fi_m)[:tau_max]
+
+    #conv = np.fft.irfft(fc * fc.conjugate())[:tau_max]
     return x_cumsum[w:w - tau_max:-1] + x_cumsum[w] - x_cumsum[:tau_max] - 2 * conv
 
 
@@ -52,8 +85,10 @@ def cumulativeMeanNormalizedDifferenceFunction(df, N):
     :return: cumulative mean normalized difference function
     :rtype: list
     """
+    print(df.shape, N)
+    cmndf = df[1:] * np.array(range(1, N))
 
-    cmndf = df[1:] * range(1, N) / np.cumsum(df[1:]).astype(float) #scipy method
+    #/ np.cumsum(df[1:]).astype(float) #scipy method
     return np.insert(cmndf, 0, 1)
 
 
@@ -80,7 +115,7 @@ def getPitch(cmdf, tau_min, tau_max, harmo_th=0.1):
     return 0    # if unvoiced
 
 
-def compute_yin(sig, sr, w_len=512, w_step=256, f0_min=100, f0_max=500, harmo_thresh=0.1):
+def compute_yin(sig, sr, w_len=512, w_step=256, f0_min=80, f0_max=1350, harmo_thresh=0.1):
     """
 
     Compute the Yin Algorithm. Return fundamental frequency and harmonic rate.
@@ -117,6 +152,7 @@ def compute_yin(sig, sr, w_len=512, w_step=256, f0_min=100, f0_max=500, harmo_th
 
         #Compute YIN
         df = differenceFunction(frame, w_len, tau_max)
+        print(df, df.shape)
         cmdf = cumulativeMeanNormalizedDifferenceFunction(df, tau_max)
         p = getPitch(cmdf, tau_min, tau_max, harmo_thresh)
 

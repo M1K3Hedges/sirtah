@@ -13,7 +13,7 @@ def testfunc():
 
 # Audio parameters
 audioparams = {
-	"sample_rate": 44100,
+	"sample_rate": 16000,
 	"channels": 1,
 	"buffersize": 2048,
 	"volume_thresh": 0.01
