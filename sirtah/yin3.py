@@ -1,9 +1,8 @@
 import json
 
-import numpy as np
-from tqdm import tqdm
-from scipy.io import wavfile
-from matplotlib import pyplot as plt
+from ulab import numpy as np
+#from tqdm import tqdm
+
 
 
 def ACF(f, W, t, lag):    
@@ -76,7 +75,7 @@ def augmented_detect_pitch_CMNDF(f, W, t, sample_rate, bounds, thresh=0.1):  # A
         sample = np.argmin(CMNDF_vals) + bounds[0]
     return sample_rate / (sample + 1)
 
-
+'''
 def f(x):
     f_0 = 1
     envelope = lambda x: np.exp(-x)
