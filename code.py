@@ -9,6 +9,7 @@ from ulab import numpy as np
 from sirtah.constants import audioparams
 from sirtah.audioprocessing import audio2float
 from sirtah.yin import compute_yin
+from sirtah.yin2 import yin_pitchtracker
 
 #from sirtah.pitchtrackers import PitchValues
 
@@ -62,32 +63,26 @@ def main():
     # Output to Coin Vibration Motor
     cvm = pwmio.PWMOut(board.GP6, frequency = 500, variable_frequency = True)
 
-    for _ in range(100):
-        try:
+    for _ in range(1):
+        mic.record(samples, audioparams["buffersize"])
+        samps32 = utils.from_uint16_buffer(samples) #audio2float(samples)
+        samps32 -= (2**16)//2
+        samps32 /= (2**16)//2
 
-            mic.record(samples, audioparams["buffersize"])
-            samps32 = utils.from_uint16_buffer(samples) #audio2float(samples)
-            #samps32 -= (2**16)//2
-            #samps32 /= (2**16)//2
+        #print(normalized_rms(samples))
+        #print(min(samps32), max(samps32))
 
-            #print(normalized_rms(samples))
-            #print(min(samps32), max(samps32))
-
-            f0s, hrs, amins, ts = compute_yin(
-                sig = samps32,
-                sr  = audioparams["sample_rate"],
-                w_len = audioparams["buffersize"],
-                w_step = audioparams["buffersize"] // 2,
-                f0_min = 20,
-                f0_max = 22000,
-                harmo_thresh = 0.1
-            )
-
-            print(f0s, hrs, amins, ts)
-            time.sleep(0.01)
-        except Exception as e:
-            print(e)
-            break
+        f0s, hrs, amins, ts = compute_yin(
+            sig = samps32,
+            sr  = audioparams["sample_rate"],
+            w_len = 512,  #audioparams["buffersize"],
+            w_step = 256, #audioparams["buffersize"] // 2,
+            f0_min = 20,
+            f0_max = 22000,
+            harmo_thresh = 0.1
+        )
+        print(f0s, hrs, amins, ts)
+        time.sleep(0.01)
 
     print("program done")
 
