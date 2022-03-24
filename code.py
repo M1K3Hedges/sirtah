@@ -1,48 +1,15 @@
-import array
-import audiobusio
-import board
-import math
-import pwmio
 import time
-from ulab import utils
+import array
+import board
+import audiobusio
+import analogio
+import pwmio
+import math
+import pitch
 from ulab import numpy as np
-from sirtah.constants import audioparams
-from sirtah.audioprocessing import audio2float
-from sirtah.yin import compute_yin
-from sirtah.yin2 import yin_pitchtracker
+from sirtah.constants import audioparams, get_pitch_difference, get_coin_output_value
+from sirtah.audioprocessing import remove_dc, normalized_rms, MovingAverage
 
-#from sirtah.pitchtrackers import PitchValues
-
-### AUDIO SECTION ###
-# Audio Parameters
-#fs = 44100
-#buffersize = 2048
-#volume_thresh = 0.01
-
-# Average Microphone Levels/Remove DC Bias
-
-def mean(values):
-    return sum(values) / len(values)
-
-# Return Microphone Levels
-def normalized_rms(values):
-    minbuf = int(mean(values))
-    samples_sum = sum(
-        float(sample - minbuf) * (sample - minbuf)
-        for sample in values)
-
-    return math.sqrt(samples_sum / len(values))
-
-### HAPTIC SECTION ###
-'''
-def duty_cycle_update(cvm):
-    freq_percent = des_freq * 0.01
-
-    if abs(freqDiff) > freq_percent:
-        cvm.duty_cycle = int(65535/freqDiff)
-    else:
-        cvm.duty_cycle = 0
-'''
 
 ### OPERATION SECTION ###
 
@@ -50,76 +17,75 @@ def main():
 
     # Microphone Input
     mic = audiobusio.PDMIn(
-        board.GP3,
-        board.GP2,
+        board.GP19,
+        board.GP18,
         sample_rate = audioparams["sample_rate"],
         bit_depth = 16,
         mono = True
     )
 
     samples = array.array('H', [0] * audioparams["buffersize"])
-    #np.empty((audioparams["buffersize"], ), dtype=np.uint16)
 
     # Output to Coin Vibration Motor
-    cvm = pwmio.PWMOut(board.GP6, frequency = 500, variable_frequency = True)
+    cvm = pwmio.PWMOut(board.GP17, frequency = 250, variable_frequency = True)
 
-    for _ in range(1):
+    #buffer, fs, threshold
+    pt = pitch.Yin(
+        audioparams["buffersize"],
+        audioparams["sample_rate"],
+        0.15
+    )
+
+    BUFLEN = 4
+    #avgbuffer = [0 for _ in range(BUFLEN)]
+    f0_mavg = MovingAverage(buflen=BUFLEN)
+    cn_mavg = MovingAverage(buflen=BUFLEN)
+
+    coin_out = 0
+
+    while True: #for _ in range(25):
+
         mic.record(samples, audioparams["buffersize"])
-        samps32 = utils.from_uint16_buffer(samples) #audio2float(samples)
-        samps32 -= (2**16)//2
-        samps32 /= (2**16)//2
+        f0_pre = pt.getPitch(samples)
 
-        #print(normalized_rms(samples))
-        #print(min(samps32), max(samps32))
+        # Only picks up input if pitch found
+        if int(f0_pre) == -1:
+           f0_mavg.update(0)
+           cn_mavg.update(0)
 
-        f0s, hrs, amins, ts = compute_yin(
-            sig = samps32,
-            sr  = audioparams["sample_rate"],
-            w_len = 512,  #audioparams["buffersize"],
-            w_step = 256, #audioparams["buffersize"] // 2,
-            f0_min = 20,
-            f0_max = 22000,
-            harmo_thresh = 0.1
-        )
-        print(f0s, hrs, amins, ts)
+           if int(cn_mavg.get()) == 0:
+               cvm.duty_cycle = 1
+
+           continue
+
+        # -----> Process the pitch from here
+        f0_raw = f0_pre / 2
+
+        # Update moving avg buffer
+        f0_mavg.update(f0_raw)
+
+        # Compute moving avg
+        f0_estimate = f0_mavg.get()
+
+        #
+        fdiff, idx, target = get_pitch_difference(f0_estimate)
+
+        #
+        coin_out_raw = get_coin_output_value(fdiff, idx)
+        cn_mavg.update(coin_out_raw)
+
+        coin_out = cn_mavg.get()
+        cvm.duty_cycle = int(coin_out) if coin_out > 0 else 1
+
+        # -----> Printing
+        print("f0 est: ", f0_estimate)
+        print(f"fdiff: {fdiff}, target: {target}")
+        print(f"coin out: {coin_out}")
+
+        # -----> END OF LOOP UPDATES
         time.sleep(0.01)
 
     print("program done")
 
 if __name__ == "__main__":
     main()
-
-'''
-while True:
-    try:
-        testfunc()
-    except KeyboardInterrupt as e:
-        print("quitting infinite loop")
-        break
-    time.sleep(0.1)
-
-    mic.record(samples, len(samples))
-    magnitude = normalized_rms(samples)
-    input_val = int(magnitude)
-
-    pitchYIN = handleYIN(samples)
-    pitchCREPE = handleCREPE(samples)
-
-    # Computes the energy (volume) of the current frame
-    volume = np.sum(samples**2)/len(samples) * 100
-
-    if not pitchYIN or volume < volume_thresh:
-        continue
-
-    if not pitchCREPE or volume < volume_thresh:
-        continue
-
-    print((volume,))
-    f0_val = handleYIN(samples)
-    #f0_val = handleCREPE(samples)
-    freqDiff, des_freq = nv.get_note_info(f0_val)
-
-    duty_cycle_update()
-
-    time.sleep(0.1)
-'''
