@@ -5,6 +5,7 @@ Then was wrapped in CircuitPython C extension.
 
 ## AUTHORS
 [Mike Hedges](https://github.com/M1K3Hedges/)
+<br>
 [Sophus Olsen](https://github.com/sbo-mm/)
 
 ## ACKNOWLEDGEMENTS
