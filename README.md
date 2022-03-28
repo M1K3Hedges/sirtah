@@ -27,4 +27,4 @@ A [coin vibration motor](https://www.adafruit.com/product/1201) receives the PWM
 [Sophus Olsen](https://github.com/sbo-mm/)
 
 ### ACKNOWLEDGEMENTS
-YIN algorithm ([Alain de Cheveigné & Hideki Kawahara](https://asa.scitation.org/doi/abs/10.1121/1.1458024)) extracted from [Ashok Fernandez](https://github.com/ashokfernandez/) who extracted from [JorenSix](https://github.com/JorenSix/).
+YIN algorithm ([Alain de Cheveigné & Hideki Kawahara](https://asa.scitation.org/doi/abs/10.1121/1.1458024)) extracted from [Ashok Fernandez](https://github.com/ashokfernandez/), who extracted from [JorenSix](https://github.com/JorenSix/).
