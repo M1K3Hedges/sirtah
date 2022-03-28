@@ -1,15 +1,14 @@
-import time
 import array
-import board
 import audiobusio
-import analogio
-import pwmio
+import board
 import math
 import pitch
-from ulab import numpy as np
-from sirtah.constants import audioparams, get_pitch_difference, get_coin_output_value
-from sirtah.audioprocessing import remove_dc, normalized_rms, MovingAverage
+import pwmio
+import time
 
+from sirtah.audioprocessing import remove_dc, normalized_rms, MovingAverage
+from sirtah.noteprocessing import audioparams, get_pitch_difference, get_cvm_output_value
+from ulab import numpy as np
 
 ### OPERATION SECTION ###
 
@@ -26,66 +25,68 @@ def main():
 
     samples = array.array('H', [0] * audioparams["buffersize"])
 
+    # Pitch Tracker, YIN Method
+    pt = pitch.Yin(
+        audioparams["buffersize"],  # Buffer
+        audioparams["sample_rate"], # Sampling Rate
+        0.15 #Threshold
+    )
+
+    BUFLEN = 4 #Buffer Length
+    f0_mavg = MovingAverage(buflen=BUFLEN) # F0 Moving Average
+    cvm_mavg = MovingAverage(buflen=BUFLEN) # Coin Vibration Motor Average
+
     # Output to Coin Vibration Motor
     cvm = pwmio.PWMOut(board.GP17, frequency = 250, variable_frequency = True)
 
-    #buffer, fs, threshold
-    pt = pitch.Yin(
-        audioparams["buffersize"],
-        audioparams["sample_rate"],
-        0.15
-    )
+    cvm_out = 0
 
-    BUFLEN = 4
-    #avgbuffer = [0 for _ in range(BUFLEN)]
-    f0_mavg = MovingAverage(buflen=BUFLEN)
-    cn_mavg = MovingAverage(buflen=BUFLEN)
+    while True:
 
-    coin_out = 0
-
-    while True: #for _ in range(25):
-
+        # Microphone 'Record'
         mic.record(samples, audioparams["buffersize"])
+
+        # Preliminary Pitch Estimation
         f0_pre = pt.getPitch(samples)
 
         # Only picks up input if pitch found
         if int(f0_pre) == -1:
            f0_mavg.update(0)
-           cn_mavg.update(0)
+           cvm_mavg.update(0)
 
-           if int(cn_mavg.get()) == 0:
+           if int(cvm_mavg.get()) == 0:
                cvm.duty_cycle = 1
 
            continue
 
-        # -----> Process the pitch from here
+        # Begin Processing of Pitch
         f0_raw = f0_pre / 2
 
-        # Update moving avg buffer
+        # Update Moving Average Buffer
         f0_mavg.update(f0_raw)
 
-        # Compute moving avg
+        # Compute Moving Average
         f0_estimate = f0_mavg.get()
 
-        #
+        # Obtain Frequency Difference, Index and Target Frequency
         fdiff, idx, target = get_pitch_difference(f0_estimate)
 
-        #
-        coin_out_raw = get_coin_output_value(fdiff, idx)
-        cn_mavg.update(coin_out_raw)
+        # Obtain Value for Vibration Motor Output
+        cvm_out_raw = get_cvm_output_value(fdiff, idx)
+        cvm_mavg.update(cvm_out_raw)
 
-        coin_out = cn_mavg.get()
-        cvm.duty_cycle = int(coin_out) if coin_out > 0 else 1
+        cvm_out = cvm_mavg.get()
+        cvm.duty_cycle = int(cvm_out) if cvm_out > 0 else 1
 
-        # -----> Printing
-        print("f0 est: ", f0_estimate)
-        print(f"fdiff: {fdiff}, target: {target}")
-        print(f"coin out: {coin_out}")
+        # Printing
+        #print("f0 est: ", f0_estimate)
+        #print(f"fdiff: {fdiff}, target: {target}")
+        #print(f"coin out: {cvm_out}")
 
-        # -----> END OF LOOP UPDATES
+        # End of Loop Updates
         time.sleep(0.01)
 
-    print("program done")
+    #print("program done")
 
 if __name__ == "__main__":
     main()
