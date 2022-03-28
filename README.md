@@ -4,9 +4,9 @@ The code presented in this repository is for use in a project where a singer's f
 
 ## About The Code
 * 'code.py' is the necessary file name and primary file that the microcontroller needs to run the program. It calls on 'pitch', which is the YIN algorithm that has been incorporated into a modified version of the [Pimoroni Pico Lipo 16MB CircuitPython .uf2](https://circuitpython.org/board/pimoroni_picolipo_16mb/) file; where YIN (written in C; as a module) is wrapped in with the CircuitPython build and boot loaded onto the microcontroller. 
-<br>
+
 * 'audioprocessing.py' manages the moving average, microphone levels, and removal of DC bias to make the signal cleaner. 
-<br>
+
 * 'noteprocessing.py' contains the array of note frequencies, the intervals between notes, a logarithmic interpolation scaler for the PWM signal and functions that acquire index, target frequency and difference in frequency value information.
 
 ## Equipment
