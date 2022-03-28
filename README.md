@@ -1,6 +1,8 @@
 # SIRTAH
 ## Singing Reinforcement Training Applying Haptics
 The code presented in this repository is for use in a project where a singer's fundamental frequency is tracked using a version of the YIN algorithm and provided vibrotactile feedback.
+<br>
+Check out even more details at the [SIRTAH Notion](https://www.notion.so/sirtah/SIRTAH-Singing-Reinforcement-Training-Applying-Haptics-030f82c1d27b420388b12294fd48c314) page.
 
 ## About The Code
 * 'code.py' is the necessary file name and primary file that the microcontroller needs to run the program. It calls on 'pitch', which is the YIN algorithm that has been incorporated into a modified version of the [Pimoroni Pico Lipo 16MB CircuitPython .uf2](https://circuitpython.org/board/pimoroni_picolipo_16mb/) file; where YIN (written in C; as a module) is wrapped in with the CircuitPython build and boot loaded onto the microcontroller. 
