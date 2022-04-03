@@ -64,7 +64,7 @@ PLATEAU   = 10  #c
 
 # Coin Vibration Value(s); MIN, MAX
 CVM_MIN = 20000
-CVM_MAX = 50000
+CVM_MAX = 65535
 
 LO_SCALER = make_interp(-1, 0, CVM_MAX, CVM_MIN)
 HI_SCALER = make_interp( 0, 1, CVM_MIN, CVM_MAX)
